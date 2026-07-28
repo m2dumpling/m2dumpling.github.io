@@ -94,7 +94,8 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "density": "compact",
   "showCursor": true,
   "showAscii": true,
-  "replayBoot": false
+  "replayBoot": false,
+  "showParticles": false
 }/*EDITMODE-END*/;
 
 // Per-mode metadata: which accent variant + heatmap base color
@@ -136,6 +137,22 @@ const ASCII_NAME = [
 // Local stub — actual Cursor lives in boot-sequence.jsx so that file can use it
 // without depending on app.jsx's evaluation order. Re-export for local readability.
 const Cursor = window.Cursor;
+
+// ─── Starfield particle background ──────────────────────────────────────
+function Starfield() {
+  const stars = useMemo(() => {
+    const s = [];
+    for (let i = 0; i < 80; i++) {
+      const x = (Math.sin(i * 12.9898) * 43758.5453) % 1 * 100;
+      const y = (Math.cos(i * 78.233) * 43758.5453) % 1 * 100;
+      const size = ((i * 7) % 20) / 10 + 0.6;
+      const alpha = ((i * 3) % 30) / 100 + 0.08;
+      s.push(`${x.toFixed(1)}vw ${y.toFixed(1)}vh 0 ${size}px rgba(255,255,255,${alpha.toFixed(2)})`);
+    }
+    return s.join(',');
+  }, []);
+  return (<div className="starfield" aria-hidden="true"><style>{`.starfield::after{box-shadow:${stars};}`}</style></div>);
+}
 
 // ─── Boot sequence at top of page ────────────────────────────────────────
 function BootLine({ k, v, accent }) {
@@ -214,8 +231,10 @@ function Identity({ accent, accentName, showAscii }) {
     <div className="identity">
       <div className="identity-left">
         {showAscii && (
-          <pre className="ascii-name" style={{ color: accent }}>
-            {ASCII_NAME.join("\n")}
+          <pre className="ascii-name line-by-line" style={{ color: accent }}>
+            {ASCII_NAME.map((line, i) => (
+              <span key={i}>{line}</span>
+            ))}
           </pre>
         )}
         <div className="who">
@@ -548,6 +567,9 @@ function Tweaks({ t, setTweak }) {
                    onChange={(v) => setTweak("showAscii", v)} />
       <TweakToggle label="Blinking cursor" value={t.showCursor}
                    onChange={(v) => setTweak("showCursor", v)} />
+      <TweakSection label="Effects" />
+      <TweakToggle label="Starfield particles" value={t.showParticles}
+                   onChange={(v) => setTweak("showParticles", v)} />
       <TweakSection label="Boot" />
       <TweakButton label="Replay boot sequence"
                    onClick={() => setTweak("replayBoot", true)} />
@@ -695,15 +717,13 @@ function App() {
   // Each command's "output" is a Section wrapping the relevant block.
   const sectionConfigs = [
     { id: "00", title: "🥟 identity.toml",                     count: null,                                              body: <Identity accent={accentC} accentName={A.name} showAscii={t.showAscii} /> },
-    { id: "01", title: "signature flavors",                    count: SIGNATURES.length,                                 body: <Signatures accent={accentC} /> },
-    { id: "02", title: "tech stack · self-rated",              count: TECH.reduce((n, r) => n + r.v.length, 0),          body: <TechStack accent={accentC} /> },
-    { id: "03", title: "pinned · maintained · contributed",    count: PINNED.length,                                     body: <Pinned accent={accentC} /> },
-    { id: "04", title: "home-cooked repos · selected",         count: OWN_REPOS.length,                                  body: <OwnRepos accent={accentC} handle={PROFILE.handle} /> },
+    { id: "01", title: "signature flavors",                    count: SIGNATURES.length,                                 body: <Signatures accent={accentC} />,                       show: SIGNATURES.length > 0 },
+    { id: "02", title: "tech stack · self-rated",              count: TECH.reduce((n, r) => n + r.v.length, 0),          body: <TechStack accent={accentC} />,                        show: TECH.length > 0 },
+    { id: "03", title: "pinned · maintained · contributed",    count: PINNED.length,                                     body: <Pinned accent={accentC} />,                           show: PINNED.length > 0 },
+    { id: "04", title: "home-cooked repos · selected",         count: OWN_REPOS.length,                                  body: <OwnRepos accent={accentC} handle={PROFILE.handle} />, show: OWN_REPOS.length > 0 },
     { id: "05", title: "public activity · last 26w",           count: null,                                              body: <Heatmap accent={accentC} mode={resolvedMode} hmBase={M.hmBase} /> },
-    { id: "06", title: "commit log · fresh from the kitchen",  count: COMMITS.length,                                    body: <Activity accent={accentC} /> },
-    { id: "07", title: "organizations",                        count: ORGS.length,                                       body: <Orgs accent={accentC} /> },
     { id: "08", title: "📬 contact card",                      count: null,                                              body: <Contact accent={accentC} /> },
-  ];
+  ].filter(s => s.show !== false);
   const wrappedSections = {};
   sectionConfigs.forEach(s => {
     wrappedSections[s.id] = (
@@ -714,7 +734,7 @@ function App() {
   });
 
   return (
-    <div className={"root mode-" + resolvedMode + (streamDone ? " stream-done" : " streaming")}
+    <div className={"root mode-" + resolvedMode + (streamDone ? " stream-done" : " streaming") + (t.showParticles ? " has-particles" : "")}
          style={cssVars}>
       <StatusBar accent={accentC} name={A.name} mode={resolvedMode}
                  autoBadge={t.mode === "auto" ? `auto→${resolvedMode}` : null} />
@@ -741,6 +761,7 @@ function App() {
       )}
 
       <Tweaks t={t} setTweak={setTweak} />
+      {t.showParticles && <Starfield />}
     </div>
   );
 }

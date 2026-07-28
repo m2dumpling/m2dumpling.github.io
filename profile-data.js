@@ -6,17 +6,17 @@
 
 window.PROFILE_DATA = {
 
-  // basic identity from github.com/poetpoet7
+  // basic identity from github.com/m2dumpling
   identity: {
-    handle:   "poetpoet7",
+    handle:   "m2dumpling",
     name:     "Dumpling",
     location: "Hangzhou, CN",
     motto:    "Stay hungry, stay foolish.",
     mottoEn:  "Stay hungry, stay foolish. — Steve Jobs",
-    homepage: "github.com/poetpoet7",
-    uid:      "poetpoet7",
+    homepage: "github.com/m2dumpling",
+    uid:      "m2dumpling",
     unixUid:  "1000",
-    ghUid:    "poetpoet7",
+    ghUid:    "m2dumpling",
     role:     "full-stack developer",
     tags:     ["javascript", "typescript", "react", "node", "fullstack"],
   },
@@ -30,25 +30,13 @@ window.PROFILE_DATA = {
   },
 
   // featured repos
-  pinned: [
-    { name: "terminal-portfolio",  owner: "poetpoet7", lang: "TypeScript", stars: 1, forks: 0, desc: "Terminal-style personal portfolio website. Built with love.", role: "author" },
-    { name: "dotfiles",            owner: "poetpoet7", lang: "Shell",      stars: 3, forks: 1, desc: "Personal dev environment configuration and setup scripts.", role: "author" },
-    { name: "react",               owner: "facebook",  lang: "JavaScript", stars: 230000, forks: 47000, desc: "The library for web and native user interfaces.", role: "contributor" },
-    { name: "vite",                owner: "vitejs",    lang: "TypeScript", stars: 72000,  forks: 6400, desc: "Next generation frontend tooling. It's fast!", role: "contributor" },
-  ],
+  pinned: [],
 
   // own repositories worth highlighting
-  ownRepos: [
-    { name: "terminal-portfolio", desc: "Terminal-themed personal website" },
-    { name: "dotfiles",           desc: "Dev environment configuration files" },
-    { name: "blog",               desc: "Personal tech blog built with Next.js" },
-    { name: "awesome-lists",      desc: "Curated collection of awesome resources" },
-  ],
+  ownRepos: [],
 
   // organizations
-  orgs: [
-    { handle: "poetpoet7", name: "Personal", note: "Personal projects" },
-  ],
+  orgs: [],
 
   // GitHub achievements
   achievements: [
@@ -76,12 +64,7 @@ window.PROFILE_DATA = {
   ],
 
   // recent commits
-  commits: [
-    { repo: "poetpoet7/terminal-portfolio", hash: "a1b2c3d", tag: "feat", scope: "site",     msg: "add interactive terminal shell experience",           time: "2h"  },
-    { repo: "poetpoet7/dotfiles",          hash: "e4f5g6h", tag: "feat", scope: "nvim",     msg: "configure LSP and autocomplete for TypeScript",       time: "1d"  },
-    { repo: "poetpoet7/blog",              hash: "i7j8k9l", tag: "post", scope: "content",   msg: "new article: building a terminal portfolio",          time: "3d"  },
-    { repo: "poetpoet7/awesome-lists",     hash: "m0n1o2p", tag: "docs", scope: "readme",    msg: "add frontend resources section",                      time: "1w"  },
-  ],
+  commits: [],
 
   // terminal session details
   shellEnv: {

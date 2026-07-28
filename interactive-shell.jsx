@@ -17,10 +17,10 @@ function InteractiveShell({ accent, sections }) {
   const streamCommandMap = React.useMemo(() => {
     const map = {};
     (window.STREAM_COMMANDS || []).forEach((command) => {
-      map[command.cmd] = command.id;
+      if (sections && sections[command.id]) map[command.cmd] = command.id;
     });
     return map;
-  }, []);
+  }, [sections]);
 
   const [entries, setEntries] = ishState([
     { kind: "out", text: "🥟 shell is hot and ready. type 'help' for commands, or 'neofetch' for a fun start.\nUp/Down recalls history · Tab completes · Ctrl+L clears." },

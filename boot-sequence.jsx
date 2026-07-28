@@ -120,6 +120,8 @@ function Cursor({ accent }) {
     background: on ? accent : "transparent",
     verticalAlign: "-2px",
     marginLeft: "2px",
+    boxShadow: on ? `0 0 8px ${accent}, 0 0 2px ${accent}` : "none",
+    transition: "box-shadow 0.15s ease",
   }} />;
 }
 window.Cursor = Cursor;

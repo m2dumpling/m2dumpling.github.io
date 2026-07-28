@@ -14,7 +14,7 @@
 
 window.loadProfileData = async function loadProfileData(opts = {}) {
   const mode   = opts.mode   || window.PROFILE_DATA_SOURCE || "static";
-  const handle = opts.handle || (window.PROFILE_DATA?.identity?.handle) || "poetpoet7";
+  const handle = opts.handle || (window.PROFILE_DATA?.identity?.handle) || "m2dumpling";
   const cacheKey = `dumpling-profile.github.${handle}.v2`;
   const cacheTtlMs = 6 * 60 * 60 * 1000;
   const report = (s, m, ok = true) => {

@@ -1,7 +1,7 @@
 // shell-commands.js — pure command logic for the interactive shell.
 
 (function () {
-  const FALLBACK_HANDLE = "poetpoet7";
+  const FALLBACK_HANDLE = "m2dumpling";
   const FILES = ["identity.toml", ".signatures", ".contact", "README.md", "tech.json", "stack.md"];
   const DIRS = ["projects/", "talks/", "orgs/"];
   const HIDDEN = [".zshrc", ".bashrc", ".gitconfig"];

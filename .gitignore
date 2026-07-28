@@ -2,5 +2,9 @@
 .idea/
 .vscode/
 .workbuddy/
+.spec-workflow/
+graphify-out/
+.playwright-mcp/
 node_modules/
 *.log
+*.png

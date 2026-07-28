@@ -139,6 +139,61 @@ html, body {
   color: var(--fg);
 }
 
+/* ─── CRT scanline overlay ──────────────────────────────────────────── */
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  z-index: 9999; pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 3px
+  );
+  opacity: 0.5;
+}
+.mode-paper body::before,
+.mode-light body::before {
+  opacity: 0.18;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 2px,
+    rgba(0,0,0,0.012) 2px, rgba(0,0,0,0.012) 3px
+  );
+}
+
+/* CRT vignette — dark corners */
+body::after {
+  content: "";
+  position: fixed; inset: 0;
+  z-index: 9998; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.3) 100%);
+  opacity: 0.65;
+}
+.mode-paper body::after,
+.mode-light body::after {
+  opacity: 0.25;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.08) 100%);
+}
+
+/* ─── Starfield particle layer ─────────────────────────────────────── */
+.starfield {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 0; overflow: hidden;
+}
+.starfield::after {
+  content: "";
+  position: absolute; top: 0; left: 0;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  animation: starDrift 50s linear infinite;
+}
+@keyframes starDrift {
+  from { transform: translateY(-100vh); }
+  to   { transform: translateY(0); }
+}
+
 /* ─── Status bar (tmux-like) ────────────────────────────────────────── */
 .statusbar {
   position: sticky; top: 0; z-index: 50;
@@ -398,7 +453,13 @@ html, body {
 }
 .proj:hover {
   border-color: var(--accent-dim);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 0 24px var(--accent-glow), 0 6px 18px rgba(0,0,0,0.18);
+  z-index: 2;
+}
+.pinned-grid:hover .proj:not(:hover) {
+  opacity: 0.85;
+  transition: opacity 0.25s ease;
 }
 .proj-stripe {
   position: absolute;
@@ -548,6 +609,12 @@ html, body {
 .hm-cell {
   width: 12px; height: 12px;
   border-radius: 2px;
+  transition: background-color 0.4s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.15s ease, box-shadow 0.2s ease;
+}
+.hm-cell:hover {
+  transform: scale(1.5);
+  box-shadow: 0 0 6px var(--accent-glow);
+  z-index: 1; position: relative;
 }
 .heatmap-legend {
   display: flex;
@@ -811,6 +878,67 @@ kbd {
 .root[style*="comfy"] .proj { padding: 18px 20px 18px 24px; }
 .root[style*="comfy"] .pinned-grid { gap: 18px; }
 .root[style*="comfy"] .section { margin: 48px 0; }
+
+/* ─── ASCII banner line-by-line fade-in ───────────────────────────── */
+.ascii-name.line-by-line span {
+  display: block;
+  opacity: 0;
+  animation: asciiLineIn 0.22s ease-out forwards;
+}
+@keyframes asciiLineIn {
+  from { opacity: 0; transform: translateX(-4px); filter: blur(1px); }
+  to   { opacity: 1; transform: translateX(0);   filter: blur(0); }
+}
+.ascii-name.line-by-line span:nth-child(1) { animation-delay: 0.04s; }
+.ascii-name.line-by-line span:nth-child(2) { animation-delay: 0.08s; }
+.ascii-name.line-by-line span:nth-child(3) { animation-delay: 0.12s; }
+.ascii-name.line-by-line span:nth-child(4) { animation-delay: 0.16s; }
+.ascii-name.line-by-line span:nth-child(5) { animation-delay: 0.20s; }
+.ascii-name.line-by-line span:nth-child(6) { animation-delay: 0.24s; }
+.ascii-name.line-by-line span:nth-child(7) { animation-delay: 0.28s; }
+
+/* ─── BIOS boot-line color pulse ──────────────────────────────────── */
+.bs-line {
+  animation: bootLineIn 0.5s ease-out;
+}
+@keyframes bootLineIn {
+  0%   { opacity: 0; color: var(--accent); text-shadow: 0 0 8px var(--accent-glow); }
+  40%  { opacity: 1; color: var(--accent); }
+  100% { color: var(--fg-2); text-shadow: none; }
+}
+
+/* ─── Text selection ──────────────────────────────────────────────── */
+::selection {
+  background: var(--accent);
+  color: var(--bg);
+  text-shadow: none;
+}
+
+/* ─── Custom scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border: 1px solid var(--border);
+  min-height: 40px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+::-webkit-scrollbar-corner { background: var(--bg); }
+::-webkit-scrollbar-button { display: none; }
+html {
+  scrollbar-color: var(--border-2) var(--bg);
+  scrollbar-width: thin;
+}
+
+/* ─── Status bar micro-gradient ───────────────────────────────────── */
+.statusbar {
+  background: linear-gradient(to bottom, var(--bg-2) 0%, var(--statusbar-bg) 40%, var(--statusbar-bg) 100%);
+  box-shadow: 0 1px 0 var(--border-2), inset 0 -1px 0 rgba(0,0,0,0.08);
+}
+.mode-paper .statusbar,
+.mode-light .statusbar {
+  box-shadow: 0 1px 0 var(--border-2), inset 0 -1px 0 rgba(0,0,0,0.03);
+}
 
 /* ─── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 1100px) {

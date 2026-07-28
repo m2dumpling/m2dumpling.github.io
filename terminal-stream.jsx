@@ -12,11 +12,9 @@ const STREAM_COMMANDS = [
   { id: "00", cmd: "cat identity.toml" },
   { id: "01", cmd: "cat .signatures" },
   { id: "02", cmd: "stack --rated" },
-  { id: "03", cmd: "gh repo list --pinned poetpoet7" },
-  { id: "04", cmd: "gh repo list poetpoet7 --limit 6" },
+  { id: "03", cmd: "gh repo list --pinned m2dumpling" },
+  { id: "04", cmd: "gh repo list m2dumpling --limit 6" },
   { id: "05", cmd: "contrib --weeks 26" },
-  { id: "06", cmd: "git log --author=dumpling -n 10 --pretty=tabular" },
-  { id: "07", cmd: "gh org list" },
   { id: "08", cmd: "cat .contact" },
 ];
 
@@ -264,7 +262,7 @@ function TerminalStream({ accent, sections, profileLoad, skipped, onSkip, onComp
       )}
 
       {/* Commands + outputs */}
-      {STREAM_COMMANDS.slice(0, cmdIdx).map((c, i) => {
+      {STREAM_COMMANDS.filter(c => sections[c.id]).slice(0, cmdIdx).map((c, i) => {
         const typing = i === cmdIdx - 1 && outputIdx < cmdIdx && !skipped;
         const showOutput = i < outputIdx;
         return (
