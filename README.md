@@ -2,7 +2,7 @@
 
 > A terminal emulator that happens to be a personal website. Boots like Arch Linux, runs like a shell, looks like a CRT monitor.
 
-**[m2dumpling.github.io](https://m2dumpling.github.io)**
+**[m2dumpling.github.io](https://m2dumpling.github.io/)**
 
 ---
 
