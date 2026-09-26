@@ -5,7 +5,7 @@ const { useState: ishState, useEffect: ishEffect, useRef: ishRef } = React;
 function PromptLabel({ accent }) {
   return (
     <span className="ish-label">
-      <span style={{ color: accent }}>dumpling@arch</span>
+      <span style={{ color: accent }}>m2dumpling@demo</span>
       <span className="dim">:</span>
       <span className="ish-cwd">~</span>
       <span className="dim">$&nbsp;</span>
@@ -23,7 +23,7 @@ function InteractiveShell({ accent, sections }) {
   }, [sections]);
 
   const [entries, setEntries] = ishState([
-    { kind: "out", text: "🥟 shell is hot and ready. type 'help' for commands, or 'neofetch' for a fun start.\nUp/Down recalls history · Tab completes · Ctrl+L clears." },
+    { kind: "out", text: tx("🥟 Shell is ready. Type 'help' for commands, or 'neofetch' for a quick start.\nUp/Down recalls history · Tab completes · Ctrl+L clears.", "🥟 终端已就绪。输入 help 查看命令，或输入 neofetch 快速了解资料。\n方向键上/下查看历史 · Tab 补全 · Ctrl+L 清屏。") },
   ]);
   const [input, setInput] = ishState("");
   const [history, setHistory] = ishState([]);
@@ -156,7 +156,7 @@ function InteractiveShell({ accent, sections }) {
 
   function reopen() {
     setExited(false);
-    setEntries([{ kind: "out", text: "🥟 shell reheated. type 'help' if you need a refresher." }]);
+    setEntries([{ kind: "out", text: tx("🥟 Shell reconnected. Type 'help' to see commands.", "🥟 终端已重新连接。输入 help 查看命令。") }]);
     setInput("");
     setHistIdx(-1);
     setTimeout(() => inputRef.current && inputRef.current.focus(), 0);
@@ -186,11 +186,11 @@ function InteractiveShell({ accent, sections }) {
           <span className="ish-cmd">logout</span>
         </div>
         <div className="ish-bye dim">
-          Connection to dumpling@arch closed. 🥟{" "}
+          {tx("Connection to m2dumpling@demo closed. 🥟 ", "与 m2dumpling@demo 的连接已关闭。🥟 ")}
           <button className="ish-relogin" onClick={reopen} style={{ color: accent }}>
-            [reconnect]
+            {tx("[reconnect]", "[重新连接]")}
           </button>
-          {"  or press "}<kbd>R</kbd>{" to replay the whole boot."}
+          {tx("  or press ", "  或按 ")}<kbd>R</kbd>{tx(" to replay the whole boot.", " 重播启动动画。")}
         </div>
       </div>
     );
@@ -217,7 +217,7 @@ function InteractiveShell({ accent, sections }) {
           autoCapitalize="off"
           autoCorrect="off"
           style={{ caretColor: accent }}
-          aria-label="terminal input"
+          aria-label={tx("terminal input", "终端输入")}
         />
       </div>
     </div>

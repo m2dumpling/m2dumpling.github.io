@@ -1,12 +1,10 @@
 // profile-source.js
 // ─────────────────────────────────────────────────────────────────────────
-// Data-loading hook. The page renders the static `window.PROFILE_DATA` first,
-// then refreshes the fields available from GitHub's unauthenticated public REST
-// API. Curated fields remain in profile-data.js.
+// Data-loading hook. The page renders a verified GitHub snapshot first,
+// then refreshes public fields from GitHub's unauthenticated REST API.
 //
-// To go live:
-//   1. Set window.PROFILE_DATA_SOURCE = "github" before this file loads.
-//   2. Reload. Unauthenticated requests are limited to 60 req/h per IP.
+// Live mode is enabled in index.html. Unauthenticated requests are limited
+// to 60 req/h per IP; the result is cached for six hours.
 //
 // The function returns a Promise<ProfileData> so the React app can stay
 // thin and decoupled.
@@ -15,13 +13,13 @@
 window.loadProfileData = async function loadProfileData(opts = {}) {
   const mode   = opts.mode   || window.PROFILE_DATA_SOURCE || "static";
   const handle = opts.handle || (window.PROFILE_DATA?.identity?.handle) || "m2dumpling";
-  const cacheKey = `dumpling-profile.github.${handle}.v2`;
+  const cacheKey = `dumpling-profile.github.${handle}.v5`;
   const cacheTtlMs = 6 * 60 * 60 * 1000;
   const report = (s, m, ok = true) => {
     if (typeof opts.onStatus === "function") opts.onStatus({ ok, s, m });
   };
 
-  report("Mounted", "static profile defaults");
+  report("Mounted", "GitHub snapshot");
 
   if (mode === "static") {
     report("Reached target", "Static Profile Data");
@@ -102,17 +100,17 @@ async function fetchGitHub(handle, token, staticData = {}, report = () => {}) {
   report("Resolving", `${handle} account index`);
   const [user, repos, orgs, starred] = await Promise.all([
     json(`/users/${handle}`),
-    pages(`/users/${handle}/repos?per_page=100&sort=updated&type=owner`),
-    pages(`/users/${handle}/orgs?per_page=100`, 3),
-    pagedCount(`/users/${handle}/starred?per_page=1`).catch(() => staticData?.stats?.starred),
+    pages(`/users/${handle}/repos?per_page=100&sort=updated&type=owner`).catch(() => []),
+    pages(`/users/${handle}/orgs?per_page=100`, 3).catch(() => staticData?.orgs || []),
+    pagedCount(`/users/${handle}/starred?per_page=1`).catch(() => null),
   ]);
-  report("Loaded", `${repos.length} repositories · ${orgs.length} orgs`);
+  report("Loaded", `${user.public_repos} repositories · ${orgs.length} orgs`);
 
   const reposByFullName = new Map(repos.map(r => [r.full_name.toLowerCase(), r]));
   const reposByName = new Map(repos.map(r => [r.name, r]));
   const staticPinned = staticData?.pinned || [];
   const pinned = staticPinned.length
-    ? await Promise.all(staticPinned.map(p => refreshProject(p, handle, reposByFullName, json)))
+    ? staticPinned.map(p => refreshProject(p, handle, reposByFullName))
     : [...repos]
         .filter(r => !r.fork)
         .sort((a, b) => b.stargazers_count - a.stargazers_count)
@@ -123,7 +121,7 @@ async function fetchGitHub(handle, token, staticData = {}, report = () => {}) {
   const ownRepos = (staticData?.ownRepos || []).length
     ? staticData.ownRepos.map(r => {
         const live = reposByName.get(r.name);
-        return { name: r.name, desc: live?.description || r.desc || "" };
+        return { ...r, desc: live?.description || r.desc || "" };
       })
     : [...repos]
         .filter(r => !r.fork)
@@ -138,14 +136,14 @@ async function fetchGitHub(handle, token, staticData = {}, report = () => {}) {
   report("Resolved", `${commits.length} recent commit rows`);
 
   return {
+    source: { kind: "github", asOf: new Date().toISOString() },
     identity: {
       handle:   user.login,
       name:     user.name || user.login,
-      location: (user.location || "").toUpperCase(),
+      location: user.location || undefined,
       homepage: user.blog || user.html_url,
       motto:    user.bio || undefined,
       uid:      String(user.id),
-      // Keep static role / tags / English motto. GitHub doesn't have those.
     },
     stats: {
       repos:     user.public_repos,
@@ -156,10 +154,10 @@ async function fetchGitHub(handle, token, staticData = {}, report = () => {}) {
     pinned,
     ownRepos,
     commits,
-    heatmap: buildPublicActivityHeatmap(events),
+    heatmap: events.length ? buildPublicActivityHeatmap(events, 13) : undefined,
     orgs: orgs.map(o => ({
-      handle: o.login,
-      name:   o.login,
+      handle: o.login || o.handle,
+      name:   o.login || o.name || o.handle,
       note:   o.description || "",
     })),
   };
@@ -248,7 +246,7 @@ function timeAgo(dateText) {
   return Math.floor(delta / month) + "mo";
 }
 
-function buildPublicActivityHeatmap(events, weekCount = 26) {
+function buildPublicActivityHeatmap(events, weekCount = 13) {
   const end = new Date();
   const start = startOfWeek(new Date(end.getFullYear(), end.getMonth(), end.getDate() - (weekCount - 1) * 7));
   const counts = Array.from({ length: weekCount }, () => Array(7).fill(0));
@@ -308,11 +306,10 @@ function writeCache(key, data) {
   } catch (e) {}
 }
 
-async function refreshProject(project, handle, reposByFullName, json) {
+function refreshProject(project, handle, reposByFullName) {
   const fullName = `${project.owner}/${project.name}`.toLowerCase();
-  const repo = reposByFullName.get(fullName)
-    || await json(`/repos/${project.owner}/${project.name}`).catch(() => null);
-  return repo ? projectFromRepo(repo, handle, project.role, project.desc) : project;
+  const repo = reposByFullName.get(fullName);
+  return repo ? { ...projectFromRepo(repo, handle, project.role, project.desc), descZh: project.descZh } : project;
 }
 
 function projectFromRepo(repo, handle, role, fallbackDesc) {

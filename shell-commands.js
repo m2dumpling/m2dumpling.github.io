@@ -30,12 +30,8 @@
     return shellEnv().unixUser || "dumpling";
   }
 
-  function unixUid() {
-    return identity().unixUid || "1000";
-  }
-
   function githubUid() {
-    return identity().ghUid || identity().uid || "49082129";
+    return identity().ghUid || identity().uid || "unknown";
   }
 
   function list(value) {
@@ -44,33 +40,33 @@
 
   function nowStr() {
     const now = new Date();
-    const local = new Date(now.getTime() + (8 * 60 + now.getTimezoneOffset()) * 60_000);
+    const local = now;
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const pad = (n) => String(n).padStart(2, "0");
-    return `${days[local.getDay()]} ${months[local.getMonth()]} ${pad(local.getDate())} ${pad(local.getHours())}:${pad(local.getMinutes())}:${pad(local.getSeconds())} CST ${local.getFullYear()}`;
+    return tx(`${days[local.getDay()]} ${months[local.getMonth()]} ${pad(local.getDate())} ${pad(local.getHours())}:${pad(local.getMinutes())}:${pad(local.getSeconds())} ${local.getFullYear()} (local)`, `${local.getFullYear()}年${local.getMonth()+1}月${local.getDate()}日 ${pad(local.getHours())}:${pad(local.getMinutes())}:${pad(local.getSeconds())}（本地时间）`);
   }
 
   function uptimeStr() {
     const now = new Date();
-    const local = new Date(now.getTime() + (8 * 60 + now.getTimezoneOffset()) * 60_000);
+    const local = now;
     const pad = (n) => String(n).padStart(2, "0");
-    return ` ${pad(local.getHours())}:${pad(local.getMinutes())}:${pad(local.getSeconds())}  up 327 days, 14:22,  1 user,  load average: 0.42, 0.58, 0.61`;
+    return tx(` ${pad(local.getHours())}:${pad(local.getMinutes())}:${pad(local.getSeconds())}  browser demo (host uptime unavailable)`, ` ${pad(local.getHours())}:${pad(local.getMinutes())}:${pad(local.getSeconds())}  浏览器演示（无法获取设备运行时间）`);
   }
 
   function helpText() {
     return [
-      "available commands:",
+      tx("available commands:", "可用命令："),
       "",
-      "  info     whoami  id  pwd  date  uptime  uname  bin",
-      "  files    ls  ll  cat  tree  history",
-      "  shell    echo  clear  exit  fortune  sl  coffee",
-      "  system   ps  top  neofetch  man",
-      "  dev      git  gh  go  vim  ssh  curl",
-      "  profile  stack  orgs  contrib  repos",
+      tx("  info     whoami  id  pwd  date  uptime  uname  bin", "  信息    whoami  id  pwd  date  uptime  uname  bin"),
+      tx("  files    ls  ll  cat  tree  history", "  文件    ls  ll  cat  tree  history"),
+      tx("  shell    echo  clear  exit  fortune  sl  coffee", "  终端    echo  clear  exit  fortune  sl  coffee"),
+      tx("  system   ps  top  neofetch  man", "  系统    ps  top  neofetch  man"),
+      tx("  dev      git  gh  go  vim  ssh  curl", "  开发    git  gh  go  vim  ssh  curl"),
+      tx("  profile  stack  orgs  contrib  repos", "  资料    stack  orgs  contrib  repos"),
       "",
-      "  exact stream commands replay the rich sections above",
-      "  Up/Down recalls history    Tab completes    Ctrl+L clears",
+      tx("  exact stream commands replay the rich sections above", "  输入上方展示过的完整命令，可再次查看对应区块"),
+      tx("  Up/Down recalls history    Tab completes    Ctrl+L clears", "  上/下键查看历史    Tab 补全    Ctrl+L 清屏"),
     ].join("\n");
   }
 
@@ -88,7 +84,7 @@
     return entries.map((entry) => {
       const perm = entry.kind === "d" ? "drwxr-xr-x" : "-rw-r--r--";
       const size = entry.kind === "d" ? "  4096" : String(120 + entry.name.length * 17).padStart(6, " ");
-      return `${perm}  1 ${unixUser()} ${unixUser()} ${size} May 21 14:22 ${entry.name}`;
+      return `${perm}  1 ${unixUser()} ${unixUser()} ${size} ${tx("demo", "演示")} ${entry.name}`;
     }).join("\n");
   }
 
@@ -99,43 +95,38 @@
     const files = {
       "identity.toml": () => [
         "# identity.toml",
-        `name      = "${id.name || "Bin"}"`,
+        `name      = "${id.name || handle()}"`,
         `handle    = "${handle()}"`,
-        `role      = "${id.role || "backend engineer"}"`,
-        `location  = "${id.location || ""}"`,
+        ...(id.role ? [`role      = "${id.role}"`] : []),
+        ...(id.location ? [`location  = "${id.location}"`] : []),
         `homepage  = "${id.homepage || "https://github.com/" + handle()}"`,
-        `motto.zh  = "${id.motto || ""}"`,
-        `motto.en  = "${id.mottoEn || ""}"`,
+        ...(id.motto ? [`bio       = "${id.motto}"`] : []),
         `github_id = "${githubUid()}"`,
-        `tags      = [${list(id.tags).map((tag) => `"${tag}"`).join(", ")}]`,
+        ...(list(id.tags).length ? [`tags      = [${list(id.tags).map((tag) => `"${tag}"`).join(", ")}]`] : []),
       ].join("\n"),
 
       ".signatures": () => list(pd.signatures).map(
         (sig, i) => `${String(i + 1).padStart(2, "0")}. ${sig.tag}\n    ${sig.note}`
-      ).join("\n") || "(no signatures configured)",
+      ).join("\n") || tx("(no signatures configured)", "（暂无个人特色资料）"),
 
       ".contact": () => [
         `github   github.com/${handle()}`,
-        `blog     ${id.homepage || ""}`,
-        `region   ${id.location || ""}`,
-        "open to  interesting OSS collabs",
+        ...(id.homepage && id.homepage !== `https://github.com/${handle()}` ? [`website  ${id.homepage}`] : []),
+        ...(id.location ? [`region   ${id.location}`] : []),
       ].join("\n"),
 
       "README.md": () => [
         `# ${id.name || handle()}`,
         "",
-        id.role || "backend engineer",
+        ...(id.role ? [id.role, ""] : []),
+        ...(id.location ? [tx(`Location: ${id.location}`, `所在地：${id.location}`), ""] : []),
+        tx("## stats", "## 统计"),
+        tx(`- ${s.repos ?? 0} repositories`, `- ${s.repos ?? 0} 个公开仓库`),
+        tx(`- ${s.followers ?? 0} followers`, `- ${s.followers ?? 0} 位关注者`),
+        tx(`- ${s.starred ?? 0} stars given`, `- 已标星 ${s.starred ?? 0} 个项目`),
+        tx(`- ${list(pd.orgs).length} organizations`, `- ${list(pd.orgs).length} 个组织`),
         "",
-        `Location: ${id.location || "unknown"}`,
-        "",
-        "## stats",
-        `- ${s.repos ?? 0} repositories`,
-        `- ${s.followers ?? 0} followers`,
-        `- ${s.starred ?? 0} stars given`,
-        `- ${list(pd.orgs).length} organizations`,
-        "",
-        `> ${id.motto || ""}`,
-        `> ${id.mottoEn || ""}`,
+        ...(id.motto ? [`> ${id.motto}`] : []),
       ].join("\n"),
 
       "tech.json": () => JSON.stringify(
@@ -146,23 +137,23 @@
 
       "stack.md": () => list(pd.tech).map(
         (item) => `- ${item.k} [${item.level}/5] - ${list(item.v).join(", ")}`
-      ).join("\n") || "(no stack configured)",
+      ).join("\n") || tx("(no stack configured)", "（暂无技术栈资料）"),
 
-      ".zshrc": () => "# ~/.zshrc\nexport GOPATH=$HOME/go\nexport PATH=$PATH:$GOPATH/bin\nalias g=git\nalias k=kubectl",
-      ".bashrc": () => "# fallback shell\nPS1='\\u@\\h:\\w\\$ '",
-      ".gitconfig": () => `[user]\n  name = ${id.name || "Bin"}\n  email = ${handle()}@users.noreply.github.com\n[core]\n  editor = nvim\n[init]\n  defaultBranch = main`,
+      ".zshrc": () => tx("(browser demo: local shell configuration is unavailable)", "（浏览器演示：无法读取本地终端配置）"),
+      ".bashrc": () => tx("(browser demo: local shell configuration is unavailable)", "（浏览器演示：无法读取本地终端配置）"),
+      ".gitconfig": () => tx("(browser demo: local Git configuration is unavailable)", "（浏览器演示：无法读取本地 Git 配置）"),
     };
     return files[name] ? files[name]() : null;
   }
 
   function catCmd(args) {
-    if (args.length === 0) return "cat: missing operand. try 'cat README.md'.";
+    if (args.length === 0) return tx("cat: missing operand. try 'cat README.md'.", "cat：缺少文件名，可试试 cat README.md。");
     return args.map((name) => {
       const clean = name.replace(/^\.\//, "");
       const content = fileContent(clean);
       if (content != null) return content;
-      if (DIRS.includes(clean) || DIRS.includes(clean + "/")) return `cat: ${name}: Is a directory`;
-      return `cat: ${name}: No such file or directory`;
+      if (DIRS.includes(clean) || DIRS.includes(clean + "/")) return tx(`cat: ${name}: Is a directory`, `cat：${name} 是目录`);
+      return tx(`cat: ${name}: No such file or directory`, `cat：找不到 ${name}`);
     }).join("\n");
   }
 
@@ -184,7 +175,7 @@
   }
 
   function branchLines(items, prefix) {
-    if (items.length === 0) return [`${prefix}└── (empty)`];
+    if (items.length === 0) return [`${prefix}└── ${tx("(empty)", "（空）")}`];
     return items.map((item, index) => {
       const marker = index === items.length - 1 ? "└── " : "├── ";
       return `${prefix}${marker}${item}`;
@@ -211,13 +202,14 @@
       "└── orgs/",
       ...branchLines(orgs, "    "),
       "",
-      `${3 + projects.length + orgs.length} directories, ${FILES.length} files`,
+      tx(`${3 + projects.length + orgs.length} directories, ${FILES.length} files`, `${3 + projects.length + orgs.length} 个目录，${FILES.length} 个文件`),
     ];
     return lines.join("\n");
   }
 
   function buildProcessTable() {
     return [
+      tx("(simulated process list)", "（模拟进程列表）"),
       "  PID USER     %CPU  %MEM  COMMAND",
       `    1 ${unixUser().padEnd(8)} 0.0   0.1  /sbin/init`,
       `  421 ${unixUser().padEnd(8)} 1.8   3.2  tmux: server`,
@@ -229,33 +221,27 @@
   }
 
   function buildNeofetch() {
-    const env = shellEnv();
     const s = stats();
     const info = [
-      `${handle()}@arch`,
+      `${handle()}@github`,
       "-----------------",
-      `OS:       ${env.distro || "Arch Linux"}`,
-      `Kernel:   ${env.kernel || "6.6.10"}`,
-      `Shell:    ${env.shell || "zsh"}`,
-      `Term:     tmux ${env.tmux || "3.4"}`,
-      `Go:       ${env.goVer || "go1.22.4"}`,
-      "Uptime:   327d 14h 22m",
-      `Repos:    ${s.repos ?? 0}`,
-      `Followers: ${s.followers ?? 0}`,
-      `Orgs:     ${list(data().orgs).length}`,
+      tx("Runtime:  browser demo", "运行环境：浏览器演示"),
+      tx("Source:   GitHub public API", "数据来源：GitHub 公开接口"),
+      tx(`Repos:    ${s.repos ?? 0}`, `公开仓库：${s.repos ?? 0}`),
+      tx(`Followers: ${s.followers ?? 0}`, `关注者：${s.followers ?? 0}`),
+      tx(`Orgs:     ${list(data().orgs).length}`, `组织：${list(data().orgs).length}`),
     ];
     return info.join("\n");
   }
 
   const FORTUNES = [
-    () => `${identity().motto || "Stay hungry, stay foolish."} — ${identity().mottoEn || "Steve Jobs"}`.trim(),
-    () => "Talk is cheap. Show me the code. — Linus Torvalds",
-    () => "The best dumplings are filled with curiosity. — Dumpling",
-    () => "First, solve the problem. Then, write the code. — John Johnson",
-    () => "Simplicity is the soul of efficiency. — Austin Freeman",
-    () => "Make it work, make it right, make it fast. — Kent Beck",
-    () => "The only way to do great work is to love what you do. — Steve Jobs",
-    () => "Code is like dumplings — wrap it well, and it holds together. — 🥟",
+    () => identity().motto || tx("Keep building.", "继续创造。"),
+    () => tx("Talk is cheap. Show me the code. — Linus Torvalds", "空谈无益，拿代码来。— Linus Torvalds"),
+    () => tx("First, solve the problem. Then, write the code. — John Johnson", "先解决问题，再编写代码。— John Johnson"),
+    () => tx("Simplicity is the soul of efficiency. — Austin Freeman", "简洁是效率的灵魂。— Austin Freeman"),
+    () => tx("Make it work, make it right, make it fast. — Kent Beck", "先让它运行，再让它正确，最后让它更快。— Kent Beck"),
+    () => tx("The only way to do great work is to love what you do. — Steve Jobs", "成就出色工作的方法，是热爱自己所做的事。— Steve Jobs"),
+    () => tx("Code is like dumplings — wrap it well, and it holds together. — 🥟", "代码就像饺子，包得扎实才不会散。— 🥟"),
   ];
 
   function slTrain() {
@@ -273,30 +259,29 @@
   function formatCommit(commit) {
     const tag = (commit.tag || "commit").padEnd(6, " ");
     const scope = commit.scope || "core";
-    return `${commit.hash || "-------"}  ${tag} (${scope}) ${commit.msg || "update"}  [${commit.repo || handle()}, ${commit.time || "recent"}]`;
+    return `${commit.hash || "-------"}  ${tag} (${scope}) ${commit.msg || tx("update", "更新")}  [${commit.repo || handle()}, ${commit.time || tx("recent", "近期")}]`;
   }
 
   function gitCmd(args) {
     const sub = args[0];
-    if (sub === "status") {
-      return ["On branch main", "Your branch is up to date with 'origin/main'.", "", "nothing to commit, working tree clean"].join("\n");
-    }
+    if (sub === "status") return tx("(browser demo: local Git status unavailable)", "（浏览器演示：无法读取本地 Git 状态）");
     if (sub === "log") {
       const commits = list(data().commits);
-      return commits.length ? commits.slice(0, 10).map(formatCommit).join("\n") : "(no public commit sample loaded)";
+      return commits.length ? commits.slice(0, 10).map(formatCommit).join("\n") : tx("(no public commit sample loaded)", "（暂无公开提交样本）");
     }
-    if (sub === "branch") return "* main\n  dev\n  feat/lexer\n  perf/dump-path";
+    if (sub === "branch") return tx("(browser demo: branch list unavailable)", "（浏览器演示：无法读取分支列表）");
     if (sub === "remote") return `origin\thttps://github.com/${handle()}/${handle()}.github.io.git (fetch)\norigin\thttps://github.com/${handle()}/${handle()}.github.io.git (push)`;
-    if (sub === "config") return args.slice(1).join(" ").includes("user.name") ? (identity().name || "Bin") : "(use --list to dump)";
-    if (!sub) return "usage: git <command>\n  git status | log | branch | remote | config";
-    return `git: '${sub}': not handled by this profile shell.`;
+    if (sub === "config") return tx("(browser demo: local Git configuration is unavailable)", "（浏览器演示：无法读取本地 Git 配置）");
+    if (!sub) return tx("usage: git <command>\n  git status | log | branch | remote | config", "用法：git <命令>\n  git status | log | branch | remote | config");
+    return tx(`git: '${sub}': not handled by this profile shell.`, `git：此演示终端不支持 ${sub}。`);
   }
 
   function repoListText(repos) {
     return repos.map((repo) => {
       const name = repo.owner ? `${repo.owner}/${repo.name}` : repo.name;
-      const meta = [repo.lang, repo.stars != null ? `${repo.stars} stars` : null, repo.role].filter(Boolean).join(" · ");
-      return `${name.padEnd(38, " ")} ${meta}${meta ? "  " : ""}${repo.desc || ""}`;
+      const role = repo.role ? tx(repo.role, ({author:"作者",maintainer:"维护者",contributor:"贡献者"})[repo.role] || repo.role) : null;
+      const meta = [repo.lang, repo.stars != null ? tx(`${repo.stars} stars`, `${repo.stars} 星`) : null, role].filter(Boolean).join(" · ");
+      return `${name.padEnd(38, " ")} ${meta}${meta ? "  " : ""}${repoDescription(repo)}`;
     }).join("\n");
   }
 
@@ -305,70 +290,56 @@
     if (args[0] === "repo" && args[1] === "list") {
       if (args.includes("--pinned")) return repoListText(list(data().pinned));
       const limitIndex = args.indexOf("--limit");
-      const limit = limitIndex >= 0 ? Number(args[limitIndex + 1]) || 6 : 6;
+      const limit = limitIndex >= 0 ? Number(args[limitIndex + 1]) || 3 : 3;
       return repoListText(list(data().ownRepos).slice(0, limit));
     }
-    return "usage: gh repo list [--pinned] [--limit n] | gh org list";
+    return tx("usage: gh repo list [--pinned] [--limit n] | gh org list", "用法：gh repo list [--pinned] [--limit n] | gh org list");
   }
 
   function goCmd(args) {
     const sub = args[0];
-    const goVer = shellEnv().goVer || "go1.22.4";
-    if (sub === "version") return `go version ${goVer} linux/amd64`;
-    if (sub === "env") return ["GOOS=linux", "GOARCH=amd64", `GOVERSION=${goVer}`, "GOPATH=/home/dumpling/go", "GO111MODULE=on", "GOPROXY=https://proxy.golang.org,direct"].join("\n");
-    if (sub === "build" || sub === "test" || sub === "run") return `go ${sub}: ok (simulated)`;
-    return "usage: go <command>\n  go version | go env | go build | go test | go run";
+    if (sub === "version" || sub === "env") return tx("Go environment unavailable in browser demo", "浏览器演示中无法获取 Go 环境");
+    if (sub === "build" || sub === "test" || sub === "run") return tx(`go ${sub}: ok (simulated)`, `go ${sub}：完成（模拟）`);
+    return tx("usage: go <command>\n  go version | go env | go build | go test | go run", "用法：go <命令>\n  go version | go env | go build | go test | go run");
   }
 
   function manFor(cmd) {
     const pages = {
-      whoami: "WHOAMI(1)  Print the user name associated with the current effective user ID.",
-      ls: "LS(1)      List directory contents. -a: include hidden -l: long format",
-      cat: "CAT(1)     Concatenate files and print on the standard output.",
-      git: "GIT(1)     The stupid content tracker. Try: git log",
-      gh: "GH(1)      GitHub CLI. Try: gh repo list --pinned",
-      go: "GO(1)      Manage Go source code. Try: go version",
+      whoami: tx("WHOAMI(1)  Print the current user name.", "WHOAMI(1)  显示当前用户名。"),
+      ls: tx("LS(1)      List files. -a: hidden files  -l: details", "LS(1)      列出文件。-a：含隐藏文件  -l：详细信息"),
+      cat: tx("CAT(1)     Print file contents.", "CAT(1)     显示文件内容。"),
+      git: tx("GIT(1)     Git command demo. Try: git log", "GIT(1)     Git 命令演示。试试 git log"),
+      gh: tx("GH(1)      GitHub CLI demo. Try: gh repo list --pinned", "GH(1)      GitHub CLI 演示。试试 gh repo list --pinned"),
+      go: tx("GO(1)      Go command demo. Try: go version", "GO(1)      Go 命令演示。试试 go version"),
     };
-    return pages[cmd] || `No manual entry for ${cmd}`;
+    return pages[cmd] || tx(`No manual entry for ${cmd}`, `没有 ${cmd} 的帮助条目`);
   }
 
   function contribSummary() {
     const counts = data().heatmap && data().heatmap.counts;
     if (!Array.isArray(counts)) {
       return [
-        "public activity summary:",
+        tx("public activity summary:", "公开动态摘要："),
         "",
-        "  live public-events sample not loaded yet",
-        `  commit rows available .... ${list(data().commits).length}`,
+        tx("  live public-events sample not loaded yet", "  尚未加载公开动态样本"),
+        tx(`  commit rows available .... ${list(data().commits).length}`, `  可用提交记录：${list(data().commits).length}`),
         "",
-        "reload later or use cached data after GitHub public REST succeeds",
+        tx("reload later or use cached data after GitHub public REST succeeds", "请稍后刷新，或使用已缓存的 GitHub 公开数据"),
       ].join("\n");
     }
 
     const flat = counts.flat();
     const total = flat.reduce((sum, n) => sum + n, 0);
-    const activeDays = flat.filter((n) => n > 0).length;
-    let longest = 0;
-    let current = 0;
-    flat.forEach((n) => {
-      current = n > 0 ? current + 1 : 0;
-      longest = Math.max(longest, current);
-    });
-    const byDay = [0, 0, 0, 0, 0, 0, 0];
-    counts.forEach((week) => week.forEach((n, day) => { byDay[day] += n; }));
-    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const busiest = byDay.reduce((best, value, index) => value > byDay[best] ? index : best, 0);
+    const sampledDays = flat.filter((n) => n > 0).length;
 
     return [
-      "public activity summary (last 26 weeks):",
+      tx("public events sample (up to 100 latest events):", "公开动态样本（最多最近 100 条）："),
       "",
-      `  public events .... ${total}`,
-      `  active days ...... ${activeDays} / ${flat.length}`,
-      `  longest streak ... ${longest} days`,
-      `  busiest weekday .. ${dayNames[busiest]}`,
-      `  commit sample .... ${list(data().commits).length}`,
+      tx(`  sampled events ... ${total}`, `  采样事件：${total}`),
+      tx(`  sampled days ..... ${sampledDays}`, `  采样日期：${sampledDays}`),
+      tx(`  commit sample .... ${list(data().commits).length}`, `  提交样本：${list(data().commits).length}`),
       "",
-      "source: GitHub public events API, cached in this browser",
+      tx("source: GitHub public events API; older activity is not covered", "来源：GitHub 公开动态接口；不包含更早的活动"),
     ].join("\n");
   }
 
@@ -376,7 +347,7 @@
     const orgs = list(data().orgs);
     return orgs.length
       ? orgs.map((org) => `@${(org.handle || org.name || "").padEnd(38, " ")} ${org.note || org.name || ""}`).join("\n")
-      : "(no public organizations loaded)";
+      : tx("(no public organizations loaded)", "（暂无公开组织资料）");
   }
 
   function runCommand(raw, ctx) {
@@ -389,7 +360,7 @@
     switch (cmd) {
       case "help": case "?": return helpText();
       case "whoami": return unixUser();
-      case "id": return `uid=${unixUid()}(${unixUser()}) gid=${unixUid()}(${unixUser()}) groups=${unixUid()}(${unixUser()}),10(wheel),100(users),998(docker) github=${githubUid()}`;
+      case "id": return tx(`github_id=${githubUid()} handle=${handle()} (browser demo)`, `GitHub ID=${githubUid()} 用户名=${handle()}（浏览器演示）`);
       case "pwd": return "/home/dumpling";
       case "ls": return lsCmd(args);
       case "ll": return lsCmd(["-l", ...args]);
@@ -397,43 +368,41 @@
       case "cat": return catCmd(args);
       case "echo": return args.join(" ");
       case "clear": case "cls": ctx.clearScreen(); return null;
-      case "history": return ctx.history.length === 0 ? "(no history yet)" : ctx.history.map((h, i) => `${String(i + 1).padStart(4, " ")}  ${h}`).join("\n");
+      case "history": return ctx.history.length === 0 ? tx("(no history yet)", "（暂无历史命令）") : ctx.history.map((h, i) => `${String(i + 1).padStart(4, " ")}  ${h}`).join("\n");
       case "date": return nowStr();
       case "uname":
-        if (args.includes("-a")) return `Linux arch ${shellEnv().kernel || "6.6.10"} #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux`;
-        if (args.includes("-r")) return shellEnv().kernel || "6.6.10";
-        return "Linux";
+        return tx("browser demo: host kernel unavailable", "浏览器演示：无法获取设备内核信息");
       case "uptime": return uptimeStr();
       case "ps": return buildProcessTable();
-      case "top": return buildProcessTable() + "\n\n(this isn't really top, but close enough. press q to leave.)";
+      case "top": return buildProcessTable() + tx("\n\n(simulated output; press q to leave.)", "\n\n（模拟输出；按 q 退出。）");
       case "tree": return treeOutput();
       case "neofetch": case "fastfetch": return buildNeofetch();
       case "fortune": return FORTUNES[Math.floor(Math.random() * FORTUNES.length)]();
       case "git": return gitCmd(args);
       case "gh": return ghCmd(args);
       case "go": return goCmd(args);
-      case "sudo": return "[sudo] password for dumpling:\ndumpling is not in the sudoers file. This incident will be reported.";
-      case "vim": case "vi": case "nvim": return `${cmd}: not attached to a TTY in this browser. type ':q' to exit.`;
-      case ":q": case ":q!": case ":wq": return "you have escaped vim.";
-      case "nano": return "nano: minimal editor unavailable in browser. try 'cat <file>' instead.";
-      case "ssh": return args[0] ? `ssh: connect to host ${args[0]} port 22: this is a static page.` : "usage: ssh [-l login_name] hostname";
-      case "curl": case "wget": return `${cmd}: this browser sandbox cannot open arbitrary sockets. try https://github.com/${handle()}`;
-      case "rm": return "rm: read-only profile filesystem";
-      case "mkdir": case "touch": case "mv": case "cp": return `${cmd}: read-only filesystem`;
+      case "sudo": return tx("sudo is unavailable in this browser demo.", "此浏览器演示不支持 sudo。 ");
+      case "vim": case "vi": case "nvim": return tx(`${cmd}: no TTY in this browser. Type ':q' to exit.`, `${cmd}：浏览器中没有 TTY。输入 :q 退出。`);
+      case ":q": case ":q!": case ":wq": return tx("Vim closed.", "已退出 Vim。");
+      case "nano": return tx("nano: editor unavailable in browser. Try 'cat <file>'.", "nano：浏览器中无法打开编辑器。可试试 cat <文件名>。 ");
+      case "ssh": return args[0] ? tx(`ssh: cannot connect to ${args[0]} from this static page.`, `ssh：静态页面无法连接到 ${args[0]}。`) : tx("usage: ssh [-l login_name] hostname", "用法：ssh [-l 用户名] 主机名");
+      case "curl": case "wget": return tx(`${cmd}: this browser demo cannot open arbitrary sockets. Try https://github.com/${handle()}`, `${cmd}：浏览器演示无法建立任意网络连接。可访问 https://github.com/${handle()}`);
+      case "rm": return tx("rm: read-only profile filesystem", "rm：资料文件系统为只读");
+      case "mkdir": case "touch": case "mv": case "cp": return tx(`${cmd}: read-only filesystem`, `${cmd}：文件系统为只读`);
       case "exit": case "logout": ctx.exit(); return null;
-      case "man": return args[0] ? manFor(args[0]) : "What manual page do you want?\nFor example, try: man ls";
+      case "man": return args[0] ? manFor(args[0]) : tx("Which manual page? Try: man ls", "要查看哪个命令的帮助？试试 man ls");
       case "sl": return slTrain();
       case "coffee": return "HTTP/1.1 418";
-      case "yes": return Array(20).fill(args.join(" ") || "y").join("\n") + "\n(killed after 20 lines so your screen doesn't fill up.)";
+      case "yes": return Array(20).fill(args.join(" ") || "y").join("\n") + tx("\n(stopped after 20 lines)", "\n（输出 20 行后自动停止）");
       case "bin":
-        if (args[0] === "--version" || args[0] === "-v") return `dumpling v1.0.0 (${shellEnv().goVer || "go1.22.4"}, ${shellEnv().distro || "Arch Linux"})`;
-        return `dumpling: ${identity().role || "full-stack developer"}\ntry 'dumpling --version', or github.com/${handle()}`;
-      case "open": case "xdg-open": return `would open: ${args.join(" ") || "(nothing)"}`;
-      case "stack": return list(data().tech).map((item) => `${item.k.padEnd(14, " ")} [${"▮".repeat(item.level)}${"·".repeat(5 - item.level)}]  ${list(item.v).join(", ")}`).join("\n");
+        if (args[0] === "--version" || args[0] === "-v") return tx("dumpling terminal portfolio (browser demo)", "dumpling 终端式个人主页（浏览器演示）");
+        return tx(`GitHub profile: https://github.com/${handle()}`, `GitHub 主页：https://github.com/${handle()}`);
+      case "open": case "xdg-open": return tx(`would open: ${args.join(" ") || "(nothing)"}`, `将打开：${args.join(" ") || "（无）"}`);
+      case "stack": return list(data().tech).length ? list(data().tech).map((item) => `${item.k.padEnd(14, " ")} ${list(item.v).join(", ")}`).join("\n") : tx("No self-reported tech stack is published.", "未公开自述技术栈。");
       case "orgs": return orgsText();
       case "repos": return repoListText(list(data().ownRepos));
       case "contrib": return contribSummary();
-      default: return `${cmd}: command not found. try 'help'.`;
+      default: return tx(`${cmd}: command not found. Try 'help'.`, `找不到命令 ${cmd}。输入 help 查看可用命令。`);
     }
   }
 

@@ -13,8 +13,8 @@ const STREAM_COMMANDS = [
   { id: "01", cmd: "cat .signatures" },
   { id: "02", cmd: "stack --rated" },
   { id: "03", cmd: "gh repo list --pinned m2dumpling" },
-  { id: "04", cmd: "gh repo list m2dumpling --limit 6" },
-  { id: "05", cmd: "contrib --weeks 26" },
+  { id: "04", cmd: "gh repo list m2dumpling --limit 3" },
+  { id: "05", cmd: "contrib --weeks 13" },
   { id: "08", cmd: "cat .contact" },
 ];
 
@@ -29,13 +29,10 @@ const PHASE_COMMANDS  = "commands";   // shell commands + sections
 const PHASE_DONE      = "done";       // final prompt with cursor
 
 // Pull a previous-visit timestamp from localStorage; format it like a real
-// `last login` line. Falls back to a plausible recent value on first visit.
+// `last login` line. Omitted on first visit.
 const LAST_VISIT_KEY = "dumpling-profile.last-visit";
 function formatLastLogin(date) {
-  const days   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${days[date.getDay()]} ${months[date.getMonth()]} ${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${date.getFullYear()} from 172.16.0.42`;
+  return tx(date.toLocaleString("en-US"), date.toLocaleString("zh-CN"));
 }
 function buildMotdLines() {
   let priorVisit = null;
@@ -49,21 +46,19 @@ function buildMotdLines() {
   const id  = (window.PROFILE_DATA && window.PROFILE_DATA.identity) || {};
   const env = (window.PROFILE_DATA && window.PROFILE_DATA.shellEnv) || {};
   const rule = "─".repeat(45);
-  const greeting = priorVisit ? "Welcome back to" : "Welcome to";
-  const unixUid = id.unixUid || "1000";
-  const ghUid = id.ghUid || id.uid || "49082129";
+  const greeting = priorVisit ? tx("Welcome back to", "欢迎回来") : tx("Welcome to", "欢迎来到");
+  const ghUid = id.ghUid || id.uid || "unknown";
   const user = env.unixUser || id.handle || "dumpling";
   const lines = [
-    `${greeting} ${env.distro || "Arch Linux"} ${rule}`,
-    `  kernel  ${env.kernel || "6.6.10"}   shell  ${env.shell || "zsh"}   tmux  ${env.tmux || "3.4"}`,
-    `  uid     ${unixUid}   gh_id  ${ghUid}   user   ${user}`,
-    `  locale  zh_CN.UTF-8 · en_US.UTF-8`,
+    `${greeting} ${tx("m2dumpling's terminal portfolio", "m2dumpling 的终端式个人主页")} ${rule}`,
+    `  ${tx("terminal  interactive demo   data  GitHub public API", "终端  交互演示   数据  GitHub 公开接口")}`,
+    `  GitHub ID  ${ghUid}   ${tx("handle", "用户名")}  ${id.handle || user}`,
     "─".repeat(60),
   ];
   if (priorVisit) {
-    lines.push("Last login: " + formatLastLogin(priorVisit));
+    lines.push(tx("Last visit: ", "上次访问：") + formatLastLogin(priorVisit));
   }
-  lines.push("", "🥟 Welcome! Scroll to explore, or type 'help' in the shell below.");
+  lines.push("", tx("🥟 Welcome! Scroll to explore, or type 'help' in the shell below.", "🥟 欢迎！向下滚动浏览，或在下方终端输入 help 查看命令。"));
   return lines;
 }
 
@@ -72,7 +67,7 @@ function PromptLine({ accent, cmd, typing }) {
   const done = !typing || typed === cmd;
   return (
     <div className="ts-prompt">
-      <span style={{ color: accent }}>dumpling@arch</span>
+      <span style={{ color: accent }}>m2dumpling@demo</span>
       <span className="dim">:</span>
       <span style={{ color: "#9ab" }}>~</span>
       <span className="dim">$ </span>
@@ -82,7 +77,7 @@ function PromptLine({ accent, cmd, typing }) {
   );
 }
 
-function TerminalStream({ accent, sections, profileLoad, skipped, onSkip, onComplete, mode }) {
+function TerminalStream({ accent, sections, profileLoad, skipped, onSkip, onComplete, mode, locale }) {
   // Granular progress trackers. When `skipped`, every list is fully populated.
   const [biosIdx,   setBiosIdx]   = tsUseState(0);
   const [sysIdx,    setSysIdx]    = tsUseState(0);
@@ -119,7 +114,7 @@ function TerminalStream({ accent, sections, profileLoad, skipped, onSkip, onComp
   }, [skipped]);
 
   // MOTD content with dynamic "Last login" stamp, computed once per mount.
-  const motdLines = React.useMemo(buildMotdLines, []);
+  const motdLines = React.useMemo(buildMotdLines, [locale]);
 
   // Auto-scroll the window to follow new lines (only during the live run).
   tsUseEffect(() => {
@@ -279,7 +274,7 @@ function TerminalStream({ accent, sections, profileLoad, skipped, onSkip, onComp
 
       {/* Final live prompt (only after everything has run) */}
       {phase === PHASE_DONE && window.InteractiveShell && (
-        <InteractiveShell accent={accent} sections={sections} />
+        <InteractiveShell key={locale} accent={accent} sections={sections} />
       )}
     </div>
   );

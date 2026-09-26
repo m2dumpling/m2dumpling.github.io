@@ -1,79 +1,38 @@
-// profile-data.js
-// ─────────────────────────────────────────────────────────────────────────
-// Single source of truth for everything shown on the profile page.
-// Edit this file to update Dumpling's data.
-// ─────────────────────────────────────────────────────────────────────────
-
+// Public GitHub snapshot checked on 2026-09-26. Live mode refreshes it at load.
+// Keep unverified personal details out of the profile.
 window.PROFILE_DATA = {
-
-  // basic identity from github.com/m2dumpling
+  source: { kind: "snapshot", asOf: "2026-09-26" },
   identity: {
-    handle:   "m2dumpling",
-    name:     "Dumpling",
-    location: "Hangzhou, CN",
-    motto:    "Stay hungry, stay foolish.",
-    mottoEn:  "Stay hungry, stay foolish. — Steve Jobs",
-    homepage: "github.com/m2dumpling",
-    uid:      "m2dumpling",
-    unixUid:  "1000",
-    ghUid:    "m2dumpling",
-    role:     "full-stack developer",
-    tags:     ["javascript", "typescript", "react", "node", "fullstack"],
+    handle: "m2dumpling",
+    name: "m2dumpling",
+    homepage: "https://github.com/m2dumpling",
+    uid: "224757904",
+    ghUid: "224757904",
   },
-
-  // public counts
   stats: {
-    repos:     15,
-    followers: 42,
-    starred:   88,
-    following: 23,
+    repos: 16,
+    followers: 7,
+    following: 1,
+    starred: 63,
   },
-
-  // featured repos
-  pinned: [],
-
-  // own repositories worth highlighting
-  ownRepos: [],
-
-  // organizations
+  // The four repositories shown in the public GitHub profile's Pinned area.
+  pinned: [
+    { owner: "m2dumpling", name: "pawbot", lang: "Python", stars: 31, forks: 0, role: "author", desc: "A self-hosted AI agent runtime with WebUI, MCP tools, context governance, and Record & Replay for deterministic execution & evaluation.", descZh: "可自托管的 AI 智能体运行环境，提供网页界面、MCP 工具、上下文治理，以及用于确定性执行和评估的录制与回放。" },
+    { owner: "m2dumpling", name: "ArgoV", lang: "Shell", stars: 6, forks: 1, role: "author", desc: "Cloudflare Argo Tunnel one-click script | VLESS + VMess + Shadowsocks | WARP SOCKS5/IPv6 smart routing | zero public exposure | no Nginx/Caddy | Alpine supported", descZh: "Cloudflare Argo Tunnel 一键脚本，支持 VLESS、VMess、Shadowsocks 与 WARP 智能路由；无需公网暴露或 Nginx/Caddy，支持 Alpine。" },
+    { owner: "m2dumpling", name: "trending-repos", lang: "JavaScript", stars: 6, forks: 0, role: "author", desc: "A bilingual GitHub trend tracker that discovers popular open-source and AI repositories through dynamic search and multi-source attention signals.", descZh: "中英双语 GitHub 趋势追踪器，结合动态搜索和多来源关注信号，发现热门开源及 AI 项目。" },
+    { owner: "m2dumpling", name: "LevelUpLife-PWA", lang: "TypeScript", stars: 2, forks: 0, role: "author", desc: "Gamified habit and task planner PWA featuring rewards, server push reminders, shop, backpack, monthly views, and multiplayer guild features. Installable on Android, iOS, and PC.", descZh: "游戏化习惯与任务管理 PWA，提供奖励、推送提醒、商店、背包、月视图和多人公会，可安装在 Android、iOS 和电脑上。" },
+  ],
+  ownRepos: [
+    { name: "pawbot", desc: "A self-hosted AI agent runtime with WebUI, MCP tools, context governance, and Record & Replay for deterministic execution & evaluation.", descZh: "可自托管的 AI 智能体运行环境，提供网页界面、MCP 工具、上下文治理，以及用于确定性执行和评估的录制与回放。" },
+    { name: "ArgoV", desc: "Cloudflare Argo Tunnel one-click script | VLESS + VMess + Shadowsocks | WARP SOCKS5/IPv6 smart routing | zero public exposure | no Nginx/Caddy | Alpine supported", descZh: "Cloudflare Argo Tunnel 一键脚本，支持 VLESS、VMess、Shadowsocks 与 WARP 智能路由；无需公网暴露或 Nginx/Caddy，支持 Alpine。" },
+    { name: "trending-repos", desc: "A bilingual GitHub trend tracker that discovers popular open-source and AI repositories through dynamic search and multi-source attention signals.", descZh: "中英双语 GitHub 趋势追踪器，结合动态搜索和多来源关注信号，发现热门开源及 AI 项目。" },
+    { name: "LevelUpLife-App", desc: "Gamified habit and task planner for Android with local-first progress, rewards, reminders, shop, backpack, and monthly views.", descZh: "面向 Android 的游戏化习惯与任务管理应用，支持本地优先的进度记录、奖励、提醒、商店、背包和月视图。" },
+    { name: "LevelUpLife-PWA", desc: "Gamified habit and task planner PWA featuring rewards, server push reminders, shop, backpack, monthly views, and multiplayer guild features. Installable on Android, iOS, and PC.", descZh: "游戏化习惯与任务管理 PWA，提供奖励、推送提醒、商店、背包、月视图和多人公会，可安装在 Android、iOS 和电脑上。" },
+    { name: "ip-neighbors", desc: "A C-segment IPv4 network scanner that maps and visualizes 256 subnet neighbors using Meituan's internal geolocation API.", descZh: "C 段 IPv4 网络扫描器，借助美团内部定位接口展示 256 个子网邻居。" },
+  ],
   orgs: [],
-
-  // GitHub achievements
-  achievements: [
-    { code: "YOLO",         count: 2, label: "YOLO"                },
-    { code: "QUICKDRAW",    count: 1, label: "Quickdraw"           },
-    { code: "STARSTRUCK",   count: 1, label: "Starstruck"          },
-  ],
-
-  // self-rated tech stack (1-5)
-  tech: [
-    { k: "languages",      v: ["TypeScript", "JavaScript", "Python", "Go"],                       level: 4 },
-    { k: "frontend",       v: ["React", "Vue 3", "Next.js", "Tailwind CSS"],                      level: 4 },
-    { k: "backend",        v: ["Node.js", "Express", "FastAPI", "Gin"],                           level: 3 },
-    { k: "databases",      v: ["PostgreSQL", "Redis", "MongoDB"],                                 level: 3 },
-    { k: "devops",         v: ["Docker", "Git", "GitHub Actions", "Linux"],                       level: 3 },
-    { k: "tools",          v: ["VS Code", "Figma", "Postman", "Vercel"],                          level: 4 },
-  ],
-
-  // thematic "signature areas"
-  signatures: [
-    { tag: "🥟 full-stack",   note: "Building complete web apps — from database schema to pixel-perfect UI" },
-    { tag: "terminal-ux",     note: "Crafting CLI tools and terminal experiences that feel like home" },
-    { tag: "open-source",     note: "Contributing back to the tools that make modern dev possible" },
-    { tag: "creative-code",   note: "Where engineering meets art — interactive, beautiful software" },
-  ],
-
-  // recent commits
+  achievements: [],
+  tech: [],
+  signatures: [],
   commits: [],
-
-  // terminal session details
-  shellEnv: {
-    unixUser: "dumpling",
-    kernel:   "6.6.10-arch1-1",
-    shell:    "zsh 5.9",
-    tmux:     "3.4",
-    distro:   "Arch Linux",
-    goVer:    "go1.22.4",
-    timezone: "Hangzhou · UTC+8",
-  },
 };

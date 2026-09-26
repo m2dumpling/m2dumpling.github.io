@@ -294,7 +294,7 @@ function TweaksPanel({ title = 'Tweaks', noDeckControls = false, children }) {
            style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
         <div className="twk-hd" onMouseDown={onDragStart}>
           <b>{title}</b>
-          <button className="twk-x" aria-label="Close tweaks"
+          <button className="twk-x" aria-label={typeof window.tx === 'function' ? window.tx('Close tweaks', '关闭外观设置') : 'Close tweaks'}
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={dismiss}>✕</button>
         </div>

@@ -87,7 +87,7 @@ html, body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font-family: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  font-family: "JetBrains Mono", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
   font-size: 13px;
   line-height: 1.55;
   font-feature-settings: "calt" 1, "liga" 0, "ss02" 1;
@@ -216,6 +216,8 @@ body::after {
 }
 .sb-right .sb-cell { border-right: 0; border-left: 1px solid var(--border); }
 .sb-cell.dim { color: var(--dim); }
+.lang-switch { font: inherit; cursor: pointer; background: var(--surface); color: var(--fg); border-top: 0; border-bottom: 0; border-left: 1px solid var(--border); border-right: 0; min-width: 45px; justify-content: center; }
+.lang-switch:hover, .lang-switch:focus-visible { background: var(--hover-bg); color: var(--accent); outline: none; }
 
 /* ─── Page ──────────────────────────────────────────────────────────── */
 .page {
@@ -967,6 +969,7 @@ html {
   .sb-cell { padding: 0 8px; }
   .sb-left .sb-cell:nth-child(n+3),
   .sb-right .sb-cell:nth-child(-n+3) { display: none; }
+  .sb-right .lang-switch { display: flex; }
 
   /* Section header: title can wrap; rule hides when the row wraps so it
      doesn't render across the title text on the second line. */

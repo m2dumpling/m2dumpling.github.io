@@ -16,10 +16,10 @@ let ACHIEVEMENTS;
 let TECH;
 let SIGNATURES;
 let COMMITS;
-let SHELL_ENV;
 let HEATMAP;
 let HEATMAP_COUNTS;
 let HEATMAP_MONTHS;
+let PROFILE_SOURCE;
 
 function applyProfileData(data) {
   const PD = data || DEFAULT_PROFILE_DATA;
@@ -31,60 +31,16 @@ function applyProfileData(data) {
   TECH         = PD.tech || [];
   SIGNATURES   = PD.signatures || [];
   COMMITS      = PD.commits || [];
-  SHELL_ENV    = PD.shellEnv || {};
-  HEATMAP      = PD.heatmap?.weeks || makeHeatmap();
+  HEATMAP      = PD.heatmap?.weeks || [];
   HEATMAP_COUNTS = PD.heatmap?.counts || null;
-  HEATMAP_MONTHS = PD.heatmap?.months || makeHeatmapMonths();
+  HEATMAP_MONTHS = PD.heatmap?.months || [];
+  PROFILE_SOURCE = PD.source || { kind: "snapshot", asOf: "unknown" };
 }
 
 applyProfileData(DEFAULT_PROFILE_DATA);
 
-// ─── Contribution heatmap (12 weeks × 7 days) — synthetic but plausible ──
-function makeHeatmap() {
-  const seed = (i, j) => {
-    const n = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453;
-    return n - Math.floor(n);
-  };
-  const grid = [];
-  for (let w = 0; w < 26; w++) {
-    const col = [];
-    for (let d = 0; d < 7; d++) {
-      const r = seed(w, d);
-      let v = 0;
-      if (r > 0.85) v = 4;
-      else if (r > 0.65) v = 3;
-      else if (r > 0.45) v = 2;
-      else if (r > 0.25) v = 1;
-      col.push(v);
-    }
-    grid.push(col);
-  }
-  return grid;
-}
-
-function makeHeatmapMonths(weekCount = 26) {
-  const start = startOfWeek(new Date(Date.now() - (weekCount - 1) * 7 * 24 * 60 * 60 * 1000));
-  const labels = [];
-  let prev = "";
-  for (let i = 0; i < weekCount; i++) {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i * 7);
-    const label = d.toLocaleString("en-US", { month: "short" });
-    if (i === 0 || label !== prev) labels.push({ label, col: i + 1 });
-    prev = label;
-  }
-  return labels;
-}
-
-function startOfWeek(date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return d;
-}
-
 const INITIAL_PROFILE_BOOT = [
-  { ok: true, s: "Mounted", m: "static profile defaults" },
+  { ok: true, s: "Mounted", m: "GitHub snapshot" },
 ];
 
 // ─── Defaults persisted via tweaks ───────────────────────────────────────
@@ -168,31 +124,35 @@ function BootLine({ k, v, accent }) {
 }
 
 // ─── Status bar (tmux-like) ──────────────────────────────────────────────
-function StatusBar({ accent, name, mode, autoBadge }) {
+function StatusBar({ accent, mode, themeLabel, locale, onLanguageChange }) {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
-  const xiAn = new Date(time.getTime() + (8 * 60 + time.getTimezoneOffset()) * 60_000);
-  const hh = String(xiAn.getHours()).padStart(2,"0");
-  const mm = String(xiAn.getMinutes()).padStart(2,"0");
-  const ss = String(xiAn.getSeconds()).padStart(2,"0");
+  const hh = String(time.getHours()).padStart(2,"0");
+  const mm = String(time.getMinutes()).padStart(2,"0");
+  const ss = String(time.getSeconds()).padStart(2,"0");
   const fgOnAccent = (mode === "light" || mode === "paper") ? "#fbf7ea" : "#0a0b0d";
   return (
     <div className="statusbar">
       <div className="sb-left">
-        <span className="sb-cell" style={{ background: accent, color: fgOnAccent }}>● dumpling@arch</span>
+        <span className="sb-cell" style={{ background: accent, color: fgOnAccent }}>● m2dumpling@demo</span>
         <span className="sb-cell">~/profile</span>
-        <span className="sb-cell dim">git:(main) ✓</span>
+        <span className="sb-cell dim">{tx("terminal simulation", "终端模拟")}</span>
       </div>
       <div className="sb-right">
-        <span className="sb-cell dim">{SHELL_ENV?.goVer || "go1.22.4"}</span>
-        <span className="sb-cell dim">{SHELL_ENV?.timezone || "Hangzhou · UTC+8"}</span>
-        <span className="sb-cell dim">{`${hh}:${mm}:${ss} CST`}</span>
+        <span className="sb-cell dim">{PROFILE_SOURCE.kind === "github" ? tx(`GitHub API · ${PROFILE_SOURCE.asOf.slice(0, 10)}`, `GitHub 数据 · ${PROFILE_SOURCE.asOf.slice(0, 10)}`) : tx(`GitHub snapshot · ${PROFILE_SOURCE.asOf}`, `GitHub 快照 · ${PROFILE_SOURCE.asOf}`)}</span>
+        <span className="sb-cell dim">{`${hh}:${mm}:${ss} ${tx("local", "本地")}`}</span>
         <span className="sb-cell" style={{ background: accent, color: fgOnAccent }}>
-          {autoBadge || (mode + "·" + name)}
+          {themeLabel}
         </span>
+        <button className="sb-cell lang-switch" type="button"
+                onClick={() => onLanguageChange(locale === "zh" ? "en" : "zh")}
+                aria-label={tx("Switch to Chinese", "切换到英文")}
+                title={tx("Switch to Chinese", "切换到英文")}>
+          {locale === "zh" ? "EN" : "中文"}
+        </button>
       </div>
     </div>
   );
@@ -233,39 +193,39 @@ function Identity({ accent, accentName, showAscii }) {
         {showAscii && (
           <pre className="ascii-name line-by-line" style={{ color: accent }}>
             {ASCII_NAME.map((line, i) => (
-              <span key={i}>{line}</span>
+              <span key={i}>{i === ASCII_NAME.length - 1 ? tx(line, "        ── 终端式个人主页 ──        ") : line}</span>
             ))}
           </pre>
         )}
         <div className="who">
-          <div className="who-section"># [identity]</div>
+          <div className="who-section"># [{tx("identity", "身份")}]</div>
           <div className="who-out">
-            <span className="kv-k">name</span>
+            <span className="kv-k">{tx("name", "名称")}</span>
             <span className="kv-eq">=</span>
             <span className="kv-v">"{PROFILE.name}" </span>
             <span className="dim">// {PROFILE.handle}</span>
           </div>
-          <div className="who-out">
-            <span className="kv-k">role</span>
+          {PROFILE.role && <div className="who-out">
+            <span className="kv-k">{tx("role", "角色")}</span>
             <span className="kv-eq">=</span>
-            <span className="kv-v">"{PROFILE.role || "backend engineer · open-source maintainer"}"</span>
-          </div>
-          <div className="who-out">
-            <span className="kv-k">loc </span>
+            <span className="kv-v">"{PROFILE.role}"</span>
+          </div>}
+          {PROFILE.location && <div className="who-out">
+            <span className="kv-k">{tx("loc ", "位置")}</span>
             <span className="kv-eq">=</span>
             <span className="kv-v">"{PROFILE.location}"</span>
-          </div>
-          <div className="who-out">
-            <span className="kv-k">tags</span>
+          </div>}
+          {PROFILE.tags?.length > 0 && <div className="who-out">
+            <span className="kv-k">{tx("tags", "标签")}</span>
             <span className="kv-eq">=</span>
             <span className="kv-v">[{(PROFILE.tags || []).join(", ")}]</span>
-          </div>
-          <div className="motto">
+          </div>}
+          {PROFILE.motto && <div className="motto">
             <span className="quote-mark" style={{ color: accent }}>“</span>
             <span className="motto-zh">{PROFILE.motto}</span>
             <span className="quote-mark" style={{ color: accent }}>”</span>
-            <span className="motto-en"> — {PROFILE.mottoEn}</span>
-          </div>
+            {PROFILE.mottoEn && <span className="motto-en"> — {PROFILE.mottoEn}</span>}
+          </div>}
         </div>
       </div>
 
@@ -273,23 +233,23 @@ function Identity({ accent, accentName, showAscii }) {
         <div className="stat-grid">
           <div className="stat-cell">
             <div className="stat-n" style={{ color: accent }}>{PROFILE.stats.repos}</div>
-            <div className="stat-l">REPOSITORIES</div>
+            <div className="stat-l">{tx("REPOSITORIES", "公开仓库")}</div>
           </div>
           <div className="stat-cell">
             <div className="stat-n" style={{ color: accent }}>{PROFILE.stats.followers}</div>
-            <div className="stat-l">FOLLOWERS</div>
+            <div className="stat-l">{tx("FOLLOWERS", "关注者")}</div>
           </div>
           <div className="stat-cell">
-            <div className="stat-n" style={{ color: accent }}>{PROFILE.stats.starred}</div>
-            <div className="stat-l">STARS GIVEN</div>
+            <div className="stat-n" style={{ color: accent }}>{PROFILE.stats.starred ?? "—"}</div>
+            <div className="stat-l">{tx("STARS GIVEN", "已标星")}</div>
           </div>
           <div className="stat-cell">
             <div className="stat-n" style={{ color: accent }}>{ORGS.length}</div>
-            <div className="stat-l">ORGS</div>
+            <div className="stat-l">{tx("ORGS", "组织")}</div>
           </div>
         </div>
-        <div className="achievements">
-          <div className="ach-label"># [achievements]</div>
+        {ACHIEVEMENTS.length > 0 && <div className="achievements">
+          <div className="ach-label"># [{tx("achievements", "成就")}]</div>
           {ACHIEVEMENTS.map(a => (
             <div className="ach-row" key={a.code}>
               <span className="ach-code" style={{ color: accent }}>▮</span>
@@ -298,7 +258,7 @@ function Identity({ accent, accentName, showAscii }) {
               <span className="dim" style={{ marginLeft: 10 }}>{a.label}</span>
             </div>
           ))}
-        </div>
+        </div>}
       </div>
     </div>
   );
@@ -308,7 +268,7 @@ function Identity({ accent, accentName, showAscii }) {
 function TechBar({ level, accent }) {
   const cells = [0,1,2,3,4];
   return (
-    <div className="tech-bar" title={`level ${level}/5`}>
+    <div className="tech-bar" title={tx(`level ${level}/5`, `等级 ${level}/5`)}>
       {cells.map(i => (
         <span key={i} className="tech-bar-cell"
               style={{ background: i < level ? accent : "transparent",
@@ -370,14 +330,14 @@ function ProjectCard({ p, accent }) {
           <span className="dim"> / </span>
           <span className="proj-name">{p.name}</span>
         </span>
-        <span className="proj-role" title={p.role} style={{ color: accent }}>{ROLE_GLYPH[p.role]}</span>
+        <span className="proj-role" title={tx(p.role, ({ author: "作者", maintainer: "维护者", contributor: "贡献者" })[p.role] || p.role)} style={{ color: accent }}>{ROLE_GLYPH[p.role]}</span>
       </div>
-      <div className="proj-desc">{p.desc}</div>
+      <div className="proj-desc">{repoDescription(p)}</div>
       <div className="proj-meta">
         <span className="meta-pill">{p.lang}</span>
         <span className="meta-pair"><span className="dim">★</span>{formatStars(p.stars)}</span>
         <span className="meta-pair"><span className="dim">⑂</span>{formatStars(p.forks)}</span>
-        <span className="meta-pair dim role-tag">{p.role}</span>
+        <span className="meta-pair dim role-tag">{tx(p.role, ({ author: "作者", maintainer: "维护者", contributor: "贡献者" })[p.role] || p.role)}</span>
       </div>
     </div>
   );
@@ -396,15 +356,15 @@ function OwnRepos({ accent, handle }) {
   return (
     <div className="own-list">
       <div className="own-head dim">
-        <span style={{ width: 26 }}>idx</span>
-        <span style={{ flex: "0 0 240px" }}>repo</span>
-        <span style={{ flex: 1 }}>description</span>
+        <span style={{ width: 26 }}>{tx("idx", "序号")}</span>
+        <span style={{ flex: "0 0 240px" }}>{tx("repo", "仓库")}</span>
+        <span style={{ flex: 1 }}>{tx("description", "简介")}</span>
       </div>
-      {OWN_REPOS.map((r, i) => (
+      {OWN_REPOS.slice(0, 3).map((r, i) => (
         <div className="own-row" key={r.name}>
           <span className="dim own-idx">{String(i+1).padStart(2,"0")}</span>
           <span className="own-name">{handle}/<span style={{ color: accent }}>{r.name}</span></span>
-          <span className="own-desc dim">{r.desc}</span>
+          <span className="own-desc dim">{repoDescription(r)}</span>
         </div>
       ))}
     </div>
@@ -445,12 +405,12 @@ function Heatmap({ accent, mode, hmBase }) {
     <div className="heatmap-wrap">
       <div className="heatmap-months">
         {HEATMAP_MONTHS.map(m => (
-          <span key={m.label} className="dim" style={{ gridColumn: m.col }}>{m.label}</span>
+          <span key={m.label} className="dim" style={{ gridColumn: m.col }}>{tx(m.label, ({ Jan: "1月", Feb: "2月", Mar: "3月", Apr: "4月", May: "5月", Jun: "6月", Jul: "7月", Aug: "8月", Sep: "9月", Oct: "10月", Nov: "11月", Dec: "12月" })[m.label] || m.label)}</span>
         ))}
       </div>
       <div className="heatmap">
         <div className="heatmap-days dim">
-          <span>Mon</span><span>Wed</span><span>Fri</span>
+          <span>{tx("Mon", "周一")}</span><span>{tx("Wed", "周三")}</span><span>{tx("Fri", "周五")}</span>
         </div>
         <div className="heatmap-grid">
           {HEATMAP.map((col, w) => (
@@ -458,8 +418,8 @@ function Heatmap({ accent, mode, hmBase }) {
               {col.map((v, d) => {
                 const count = HEATMAP_COUNTS?.[w]?.[d];
                 const title = count == null
-                  ? `week ${w+1} d${d+1}: ${v}`
-                  : `week ${w+1} d${d+1}: ${count} public events`;
+                  ? tx(`week ${w+1} day ${d+1}: ${v}`, `第 ${w+1} 周第 ${d+1} 天：${v}`)
+                  : tx(`week ${w+1} day ${d+1}: ${count} sampled public events`, `第 ${w+1} 周第 ${d+1} 天：采样到 ${count} 条公开事件`);
                 return <div key={d} className="hm-cell" style={{ background: colors[v] }} title={title} />;
               })}
             </div>
@@ -467,9 +427,9 @@ function Heatmap({ accent, mode, hmBase }) {
         </div>
       </div>
       <div className="heatmap-legend dim">
-        <span>less</span>
+        <span>{tx("less", "较少")}</span>
         {colors.map((c,i) => <div key={i} className="hm-cell" style={{ background: c }} />)}
-        <span>more</span>
+        <span>{tx("more", "较多")}</span>
       </div>
     </div>
   );
@@ -506,7 +466,7 @@ function Activity({ accent }) {
       })}
       <div className="log-row log-row-end" style={{ opacity: 0.5 }}>
         <span className="log-graph">│</span>
-        <span className="dim" style={{ gridColumn: "2 / -1" }}>…older commits truncated. <span style={{ color: accent }}>public REST</span> sampled across {PROFILE.stats.repos || "all"} repos.</span>
+        <span className="dim" style={{ gridColumn: "2 / -1" }}>{tx(`…older commits truncated. Public REST sample across ${PROFILE.stats.repos || "all"} repos.`, `…更早的提交已省略。GitHub 公开接口采样了 ${PROFILE.stats.repos || "全部"} 个仓库。`)}</span>
       </div>
     </div>
   );
@@ -516,14 +476,13 @@ function Activity({ accent }) {
 function Contact({ accent }) {
   const flags = [
     { f: "--github",   v: "github.com/" + PROFILE.handle },
-    { f: "--blog",     v: PROFILE.homepage },
+    { f: "--website",  v: PROFILE.homepage === `https://github.com/${PROFILE.handle}` ? null : PROFILE.homepage },
     { f: "--region",   v: PROFILE.location },
-    { f: "--available",v: "open to interesting OSS collabs" },
-  ];
+  ].filter(x => x.v);
   return (
     <div className="contact">
       <pre className="contact-table">
-{"# " + PROFILE.handle + "'s contact card · last updated " + new Date().getFullYear() + "\n\n" +
+{tx(`# ${PROFILE.handle}'s contact card · last updated ${new Date().getFullYear()}`, `# ${PROFILE.handle} 的联系信息 · 更新于 ${new Date().getFullYear()} 年`) + "\n\n" +
  flags.map(x => `${x.f.padEnd(14)}  ${x.v}`).join("\n")}
       </pre>
     </div>
@@ -534,7 +493,7 @@ function Contact({ accent }) {
 function FooterPrompt({ accent, showCursor }) {
   return (
     <div className="footer-prompt">
-      <span className="prompt" style={{ color: accent }}>dumpling@arch</span>
+      <span className="prompt" style={{ color: accent }}>m2dumpling@demo</span>
       <span className="dim">:</span>
       <span style={{ color: "#9ab" }}>~/profile</span>
       <span className="dim">{"$ that's a wrap. "}</span>
@@ -551,27 +510,27 @@ function FooterPrompt({ accent, showCursor }) {
 // ─── Tweaks panel content ────────────────────────────────────────────────
 function Tweaks({ t, setTweak }) {
   return (
-    <TweaksPanel>
-      <TweakSection label="Theme" />
-      <TweakSelect label="Mode" value={t.mode}
-                   options={["auto","noir","slate","solar","paper"]}
+    <TweaksPanel title={tx("Tweaks", "外观设置")}>
+      <TweakSection label={tx("Theme", "主题")} />
+      <TweakSelect label={tx("Mode", "外观模式")} value={t.mode}
+                   options={[{value:"auto",label:tx("Follow system","跟随系统")},{value:"noir",label:tx("Black","纯黑")},{value:"slate",label:tx("Dark","深色")},{value:"solar",label:tx("Teal","青绿")},{value:"paper",label:tx("Light","浅色")}]}
                    onChange={(v) => setTweak("mode", v)} />
-      <TweakRadio  label="Accent" value={t.accent}
-                   options={["amber","mint","cyan","mono"]}
+      <TweakRadio  label={tx("Accent", "强调色")} value={t.accent}
+                   options={[{value:"amber",label:tx("amber","琥珀")},{value:"mint",label:tx("mint","薄荷")},{value:"cyan",label:tx("cyan","青色")},{value:"mono",label:tx("mono","单色")}]}
                    onChange={(v) => setTweak("accent", v)} />
-      <TweakRadio  label="Density" value={t.density}
-                   options={["compact","comfy"]}
+      <TweakRadio  label={tx("Density", "密度")} value={t.density}
+                   options={[{value:"compact",label:tx("compact","紧凑")},{value:"comfy",label:tx("comfy","宽松")}]}
                    onChange={(v) => setTweak("density", v)} />
-      <TweakSection label="Decor" />
-      <TweakToggle label="ASCII banner" value={t.showAscii}
+      <TweakSection label={tx("Decor", "装饰")} />
+      <TweakToggle label={tx("ASCII banner", "ASCII 横幅")} value={t.showAscii}
                    onChange={(v) => setTweak("showAscii", v)} />
-      <TweakToggle label="Blinking cursor" value={t.showCursor}
+      <TweakToggle label={tx("Blinking cursor", "闪烁光标")} value={t.showCursor}
                    onChange={(v) => setTweak("showCursor", v)} />
-      <TweakSection label="Effects" />
-      <TweakToggle label="Starfield particles" value={t.showParticles}
+      <TweakSection label={tx("Effects", "特效")} />
+      <TweakToggle label={tx("Starfield particles", "星空粒子")} value={t.showParticles}
                    onChange={(v) => setTweak("showParticles", v)} />
-      <TweakSection label="Boot" />
-      <TweakButton label="Replay boot sequence"
+      <TweakSection label={tx("Boot", "启动")} />
+      <TweakButton label={tx("Replay boot sequence", "重播启动动画")}
                    onClick={() => setTweak("replayBoot", true)} />
     </TweaksPanel>
   );
@@ -580,6 +539,11 @@ function Tweaks({ t, setTweak }) {
 // ─── App ─────────────────────────────────────────────────────────────────
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [locale, setLocale] = useState(() => siteLanguage());
+  const changeLanguage = (next) => {
+    setSiteLanguage(next);
+    setLocale(next);
+  };
   const [, setDataVersion] = useState(0);
   const [profileLoad, setProfileLoad] = useState(() => ({
     ready: typeof window.loadProfileData !== "function",
@@ -648,6 +612,16 @@ function App() {
   const accentC   = isLight ? A.lc   : A.c;
   const accentDim = isLight ? A.ldim : A.dim;
   const accentGlow= isLight ? A.lglow: A.glow;
+  const themeNames = {
+    noir: ["Black", "纯黑"],
+    slate: ["Dark", "深色"],
+    solar: ["Teal", "青绿"],
+    paper: ["Light", "浅色"],
+  };
+  const [themeEn, themeZh] = themeNames[resolvedMode] || themeNames.slate;
+  const themeLabel = t.mode === "auto"
+    ? tx(`System · ${themeEn}`, `跟随系统 · ${themeZh}`)
+    : tx(`${themeEn} theme`, `${themeZh}模式`);
 
   useEffect(() => {
     const el = document.documentElement;
@@ -716,13 +690,13 @@ function App() {
 
   // Each command's "output" is a Section wrapping the relevant block.
   const sectionConfigs = [
-    { id: "00", title: "🥟 identity.toml",                     count: null,                                              body: <Identity accent={accentC} accentName={A.name} showAscii={t.showAscii} /> },
-    { id: "01", title: "signature flavors",                    count: SIGNATURES.length,                                 body: <Signatures accent={accentC} />,                       show: SIGNATURES.length > 0 },
-    { id: "02", title: "tech stack · self-rated",              count: TECH.reduce((n, r) => n + r.v.length, 0),          body: <TechStack accent={accentC} />,                        show: TECH.length > 0 },
-    { id: "03", title: "pinned · maintained · contributed",    count: PINNED.length,                                     body: <Pinned accent={accentC} />,                           show: PINNED.length > 0 },
-    { id: "04", title: "home-cooked repos · selected",         count: OWN_REPOS.length,                                  body: <OwnRepos accent={accentC} handle={PROFILE.handle} />, show: OWN_REPOS.length > 0 },
-    { id: "05", title: "public activity · last 26w",           count: null,                                              body: <Heatmap accent={accentC} mode={resolvedMode} hmBase={M.hmBase} /> },
-    { id: "08", title: "📬 contact card",                      count: null,                                              body: <Contact accent={accentC} /> },
+    { id: "00", title: tx("🥟 identity.toml", "🥟 身份资料 · identity.toml"), count: null, body: <Identity accent={accentC} accentName={A.name} showAscii={t.showAscii} /> },
+    { id: "01", title: tx("signature flavors", "个人特色"), count: SIGNATURES.length, body: <Signatures accent={accentC} />, show: SIGNATURES.length > 0 },
+    { id: "02", title: tx("tech stack · self-rated", "技术栈 · 自评"), count: TECH.reduce((n, r) => n + r.v.length, 0), body: <TechStack accent={accentC} />, show: TECH.length > 0 },
+    { id: "03", title: tx("pinned repositories · snapshot", "置顶仓库 · 快照"), count: PINNED.length, body: <Pinned accent={accentC} />, show: PINNED.length > 0 },
+    { id: "04", title: tx("home-cooked repos · selected", "个人仓库 · 精选"), count: Math.min(3, OWN_REPOS.length), body: <OwnRepos accent={accentC} handle={PROFILE.handle} />, show: OWN_REPOS.length > 0 },
+    { id: "05", title: tx("public events · latest 100 sample", "公开动态 · 最近 100 条样本"), count: null, body: <Heatmap accent={accentC} mode={resolvedMode} hmBase={M.hmBase} />, show: HEATMAP.length > 0 },
+    { id: "08", title: tx("📬 contact card", "📬 联系方式"), count: null, body: <Contact accent={accentC} /> },
   ].filter(s => s.show !== false);
   const wrappedSections = {};
   sectionConfigs.forEach(s => {
@@ -736,8 +710,8 @@ function App() {
   return (
     <div className={"root mode-" + resolvedMode + (streamDone ? " stream-done" : " streaming") + (t.showParticles ? " has-particles" : "")}
          style={cssVars}>
-      <StatusBar accent={accentC} name={A.name} mode={resolvedMode}
-                 autoBadge={t.mode === "auto" ? `auto→${resolvedMode}` : null} />
+      <StatusBar accent={accentC} mode={resolvedMode} themeLabel={themeLabel}
+                 locale={locale} onLanguageChange={changeLanguage} />
 
       <main className="page">
         <TerminalStream
@@ -746,6 +720,7 @@ function App() {
           mode={resolvedMode}
           sections={wrappedSections}
           profileLoad={profileLoad}
+          locale={locale}
           skipped={skipped}
           onComplete={handleStreamComplete}
         />
@@ -755,7 +730,7 @@ function App() {
 
       {!streamDone && (
         <button className="boot-skip" onClick={() => setSkipped(true)}>
-          <span>skip animation</span>
+          <span>{tx("skip animation", "跳过动画")}</span>
           <kbd>ESC</kbd>
         </button>
       )}
